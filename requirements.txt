@@ -1,0 +1,3 @@
+mpyq==0.2.5
+pytz==2020.1
+zephyrus-sc2-parser==0.1.13
