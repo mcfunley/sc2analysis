@@ -67,6 +67,17 @@ def parse(r):
                 mmr=int(playermeta[p.pid]['MMR']),
                 apm=int(playermeta[p.pid]['APM']))
 
+        for m in r.messages:
+            queries.create_message(
+                game_id=game_id,
+                player_id=m.player.pid,
+                frame=m.frame,
+                second=m.second,
+                to_all=m.to_all,
+                to_allies=m.to_allies,
+                to_observers=m.to_observers,
+                message=m.text)
+
 
 
 if __name__ == '__main__':
