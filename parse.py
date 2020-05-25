@@ -14,12 +14,12 @@ queries.connect('postgresql+pg8000://%s@127.0.0.1:5432/sc2' % getuser())
 
 sc2dir = os.path.expanduser(
     '~/Library/Application Support/Blizzard/Starcraft II')
-replays = Path(sc2dir).rglob('*.SC2Replay')
-
+replay_files = Path(sc2dir).rglob('*.SC2Replay')
+replays = (sc2reader.load_replay(str(p), load_level=4) for p in replay_files)
 
 def one_replay():
-    for p in replays:
-        return sc2reader.load_replay(str(p), load_level=4)
+    for r in replays:
+        return r
 
 
 def parse(r):
@@ -52,6 +52,7 @@ def parse(r):
                 winner=r.winner.number == t.number)
 
         for p in r.players:
+            pm = playermeta[p.pid]
             queries.create_player(
                 game_id=game_id,
                 player_id=p.pid,
@@ -59,13 +60,13 @@ def parse(r):
                 color=int(p.color.hex, 16),
                 color_name=p.color.name,
                 is_human=p.is_human,
-                highest_league=p.highest_league,
+                highest_league=getattr(p, 'highest_league', None),
                 pick_race=p.pick_race,
                 play_race=p.play_race,
-                url=p.url,
+                url=getattr(p, 'url', None),
                 team_id=p.team_id,
-                mmr=int(playermeta[p.pid]['MMR']),
-                apm=int(playermeta[p.pid]['APM']))
+                mmr=int(pm['MMR']) if 'MMR' in pm else None,
+                apm=int(pm['APM']))
 
         for m in r.messages:
             if hasattr(m, 'text'):
@@ -82,4 +83,5 @@ def parse(r):
 
 
 if __name__ == '__main__':
-    parse(one_replay())
+    for r in replays:
+        parse(r)
