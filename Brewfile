@@ -1,0 +1,2 @@
+brew "flyway"
+brew "postgresql"

@@ -1,0 +1,4 @@
+#!/bin/bash
+dropdb --if-exists sc2
+createdb sc2
+bin/migrate
