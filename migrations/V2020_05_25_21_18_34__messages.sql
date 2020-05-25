@@ -1,5 +1,5 @@
 -- -*- sql-dialect: postgres; -*-
-create table messages (
+create table chats (
   game_id bigint not null,
   player_id bigint not null,
   frame bigint not null,
