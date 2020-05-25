@@ -28,16 +28,28 @@ before update on sc2.games
 for each row execute procedure sc2.set_updated();
 
 
-create table people (
+create table teams (
   game_id bigint not null references games (game_id),
-  person_id bigint not null,
+  team_id bigint not null,
+  winner boolean not null default false,
+
+  primary key (game_id, team_id)
+);
+
+create table players (
+  game_id bigint not null references games (game_id),
+  player_id bigint not null,
 
   name text not null,
   color integer not null,
   color_name text not null,
   is_human boolean not null,
   highest_league integer not null,
+  pick_race text not null,
   play_race text not null,
+  url text not null,
+  team_id bigint not null,
 
-  primary key(game_id, person_id)
+  primary key(game_id, player_id),
+  foreign key (game_id, team_id) references teams (game_id, team_id)
 );

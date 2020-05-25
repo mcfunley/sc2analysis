@@ -30,16 +30,25 @@ def parse(r):
             map_name=r.map_name,
             release=r.release_string)
 
-        for p in r.people:
-            queries.create_person(
+        for t in r.teams:
+            queries.create_team(
                 game_id=game_id,
-                person_id=p.pid,
+                team_id=t.number,
+                winner=r.winner.number == t.number)
+
+        for p in r.players:
+            queries.create_player(
+                game_id=game_id,
+                player_id=p.pid,
                 name=p.name,
                 color=int(p.color.hex, 16),
                 color_name=p.color.name,
                 is_human=p.is_human,
                 highest_league=p.highest_league,
-                play_race=p.play_race)
+                pick_race=p.pick_race,
+                play_race=p.play_race,
+                url=p.url,
+                team_id=p.team_id)
 
 
 
