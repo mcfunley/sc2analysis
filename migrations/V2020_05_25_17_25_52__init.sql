@@ -6,7 +6,13 @@ create table games (
   fps real not null,
   category text not null,
   map_name text not null,
-  release text,
+  release text not null,
+  type text not null,
+  length_seconds integer not null,
+  is_ladder boolean not null,
+  is_private boolean not null,
+  region text,
+  speed text,
 
   created timestamp with time zone not null default current_timestamp,
   updated timestamp with time zone not null default current_timestamp,
@@ -49,6 +55,8 @@ create table players (
   play_race text not null,
   url text not null,
   team_id bigint not null,
+  mmr integer not null,
+  apm integer not null,
 
   primary key(game_id, player_id),
   foreign key (game_id, team_id) references teams (game_id, team_id)

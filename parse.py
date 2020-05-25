@@ -2,6 +2,8 @@
 import os
 from getpass import getuser
 from pathlib import Path
+import json
+import mpyq
 import sc2reader
 import pugsql
 
@@ -22,13 +24,26 @@ def one_replay():
 
 def parse(r):
     print(f'Parsing {r.filename}')
+
+    mpq = mpyq.MPQArchive(r.filename)
+    metadata = json.loads(
+        mpq.read_file('replay.gamemetadata.json').decode('utf8'))
+
+    playermeta = { d['PlayerID']: d for d in metadata['Players'] }
+
     with queries.transaction():
         game_id = queries.create_game(
             start_time=r.start_time,
             fps=r.game_fps,
             category=r.category,
             map_name=r.map_name,
-            release=r.release_string)
+            release=r.release_string,
+            type=r.game_type,
+            length_seconds=int(r.length.total_seconds()),
+            is_ladder=r.is_ladder,
+            is_private=r.is_private,
+            region=r.region,
+            speed=r.speed)
 
         for t in r.teams:
             queries.create_team(
@@ -48,7 +63,9 @@ def parse(r):
                 pick_race=p.pick_race,
                 play_race=p.play_race,
                 url=p.url,
-                team_id=p.team_id)
+                team_id=p.team_id,
+                mmr=int(playermeta[p.pid]['MMR']),
+                apm=int(playermeta[p.pid]['APM']))
 
 
 
