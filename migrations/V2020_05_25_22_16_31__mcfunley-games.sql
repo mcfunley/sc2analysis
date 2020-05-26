@@ -4,4 +4,4 @@ select * from games where is_ladder and type='1v1';
 
 
 create view mcfunley as
-select player_id, game_id from players where name='mcfunley';
+select * from players where name='mcfunley';
