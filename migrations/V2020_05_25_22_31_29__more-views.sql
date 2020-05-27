@@ -2,13 +2,30 @@
 create view winners as
 select p.* from players p join teams t using (game_id, team_id) where t.winner;
 
+
+create view chats_normalized as
+with msgnorm as (
+  select *, regexp_replace(
+    regexp_replace(
+      lower(trim(message)), '[[:punct:]]', ' '),
+      '[[:space:]]+', ' ') as msgnorm
+  from sc2.chats
+)
+
+select *, string_to_array(msgnorm, ' ') as tokens
+from msgnorm;
+
+
 create view ggs as
 with ggs as (
   select c.game_id, c.player_id, frame, message, t.winner
-  from sc2.chats c
+  from chats_normalized c
   join sc2.players p using (game_id, player_id)
   join sc2.teams t using (game_id, team_id)
-  where lower(trim(c.message)) in ('gg', 'g', 'wp', 'ggwp', 'gg wp')
+  where (tokens && array['gg', 'g', 'wp', 'ggwp'])
+
+    -- not an opener gg
+    and not (tokens && array['gl', 'hf', 'glhf'])
 ),
 
 -- first gg as winner
@@ -55,4 +72,4 @@ select
 from ggs g
 left join offensive_ggs off using (game_id, player_id, frame)
 left join conceding_ggs conc using (game_id, player_id, frame)
-left join reciprocating_ggs recip using (game_id, player_id, frame);
+left join reciprocating_ggs recip using (game_id, player_id, frame)
