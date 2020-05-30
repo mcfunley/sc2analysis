@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+from argparse import ArgumentParser
+from collections import defaultdict
 import os
 from getpass import getuser
 from pathlib import Path
@@ -7,6 +9,69 @@ import mpyq
 import sc2reader
 import pugsql
 
+
+class UnitCollector(object):
+    name = 'UnitCollector'
+
+    def handleInitGame(self, event, replay):
+        def blank():
+            return {
+                'born_frame': None, 'alive_frame': None, 'init_frame': None,
+                'died_frame': None,
+            }
+
+        replay.unitargs = defaultdict(blank)
+        replay.type_changes = []
+
+    def handleUnitTypeChangeEvent(self, event, replay):
+        replay.type_changes.append({
+            'unit_id': event.unit_id_index,
+            'recycle_id': event.unit_id_recycle,
+            'frame': event.frame,
+            'unit_type_name': event.unit_type_name,
+        })
+
+    def handleUnitBornEvent(self, event, replay):
+        replay.unitargs[event.unit_id_index].update({
+            'unit_id': event.unit_id_index,
+            'born_frame': event.frame,
+            'controlled_by_player_id': event.control_pid or None,
+        })
+        self.visit(event, replay, event.unit)
+
+    def handleUnitInitEvent(self, event, replay):
+        replay.unitargs[event.unit_id_index].update({
+            'unit_id': event.unit_id_index,
+            'init_frame': event.frame,
+            'controlled_by_player_id': event.control_pid or None,
+        })
+        self.visit(event, replay, event.unit)
+
+    def handleUnitDiedEvent(self, event, replay):
+        replay.unitargs[event.unit_id_index].update({
+            'unit_id': event.unit_id_index,
+            'died_frame': event.frame,
+        })
+        self.visit(event, replay, event.unit)
+
+    def visit(self, event, replay, u):
+        replay.unitargs[event.unit_id_index].update({
+            'owned_by_player_id': u.owner.pid if u.owner else None,
+            'killed_by_player_id': u.killing_player.pid if u.killing_player else None,
+            'killed_by_unit_id': u.killing_unit.id >> 18 if u.killing_unit else None,
+            'minerals': u.minerals,
+            'vespene': u.vespene,
+            'hallucinated': u.hallucinated,
+            'name': u.name,
+            'supply': u.supply,
+            'is_worker': u.is_worker,
+            'is_army': u.is_army,
+            'is_building': u.is_building,
+            'race': u.race,
+        })
+
+
+sc2reader.engine.register_plugin(UnitCollector())
 
 queries = pugsql.module('sql/')
 queries.connect('postgresql+pg8000://%s@127.0.0.1:5432/sc2' % getuser())
@@ -80,8 +145,28 @@ def parse(r):
                     to_observers=m.to_observers,
                     message=m.text)
 
+        for u in r.unitargs.values():
+            u['game_id'] = game_id
+            u['alive_frame'] = u['born_frame'] or u['init_frame'] or 0
+            queries.create_unit(**u)
+
+        for c in r.type_changes:
+            c['game_id'] = game_id
+            queries.create_unit_type_change(**c)
+
+
+def main():
+    ap = ArgumentParser()
+    ap.add_argument('--one', action='store_true', default=False)
+    args = ap.parse_args()
+
+    for r in replays:
+        parse(r)
+
+        if args.one:
+            break
+
 
 
 if __name__ == '__main__':
-    for r in replays:
-        parse(r)
+    main()
